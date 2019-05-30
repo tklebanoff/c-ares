@@ -11,6 +11,8 @@ INCLUDE (GNUInstallDirs)
 
 PROJECT (c-ares C)
 
+include(CTest)
+
 # Set this version before release
 SET (CARES_VERSION "1.15.0")
 
