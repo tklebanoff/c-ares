@@ -348,7 +348,40 @@ class TempFile : public TransientFile {
   const char* filename() const { return filename_.c_str(); }
 };
 
-#ifndef WIN32
+#ifdef _WIN32
+extern "C" {
+
+static int setenv(const char *name, const char *value, int overwrite)
+{
+  char  *buffer;
+  size_t buf_size;
+
+  if (name == NULL)
+    return -1;
+
+  if (value == NULL)
+    value = ""; /* For unset */
+
+  if (!overwrite && getenv(name) != NULL) {
+    return -1;
+  }
+
+  buf_size = strlen(name) + strlen(value) + 1 /* = */ + 1 /* NULL */;
+  buffer   = (char *)malloc(buf_size);
+  _snprintf(buffer, buf_size, "%s=%s", name, value);
+  _putenv(buffer);
+  free(buffer);
+  return 0;
+}
+
+static int unsetenv(const char *name)
+{
+  return setenv(name, NULL, 1);
+}
+
+} /* extern "C" */
+#endif
+
 // RAII class for a temporary environment variable value.
 class EnvValue {
  public:
@@ -372,7 +405,6 @@ class EnvValue {
   bool restore_;
   std::string original_;
 };
-#endif
 
 
 #ifdef HAVE_CONTAINER
@@ -453,7 +485,6 @@ private:
     InnerTestBody();                                                            \
   }                                                                             \
   void VCLASS_NAME(casename, testname)::InnerTestBody()
-
 
 }  // namespace test
 }  // namespace ares

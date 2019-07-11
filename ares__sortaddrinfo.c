@@ -54,7 +54,7 @@
 
 struct addrinfo_sort_elem
 {
-  struct ares_addrinfo *ai;
+  struct ares_addrinfo_node *ai;
   int has_src_addr;
   ares_sockaddr src_addr;
   int original_order;
@@ -401,7 +401,7 @@ static int find_src_addr(ares_channel channel,
       return 0;
     }
 
-  sock = channel->sock_funcs->asocket(addr->sa_family, SOCK_DGRAM, IPPROTO_UDP, channel->sock_func_cb_data);
+  sock = ares__open_socket(channel, addr->sa_family, SOCK_DGRAM, IPPROTO_UDP);
   if (sock == -1)
     {
       if (errno == EAFNOSUPPORT)
@@ -416,23 +416,22 @@ static int find_src_addr(ares_channel channel,
 
   do
     {
-      ret = channel->sock_funcs->aconnect(sock, addr, len, channel->sock_func_cb_data);
+      ret = ares__connect_socket(channel, sock, addr, len);
     }
   while (ret == -1 && errno == EINTR);
 
   if (ret == -1)
     {
-      channel->sock_funcs->aclose(sock, channel->sock_func_cb_data);
+      ares__close_socket(channel, sock);
       return 0;
     }
 
   if (getsockname(sock, src_addr, &len) == -1)
     {
-      channel->sock_funcs->aclose(sock, channel->sock_func_cb_data);
+      ares__close_socket(channel, sock);
       return -1;
     }
-
-  channel->sock_funcs->aclose(sock, channel->sock_func_cb_data);
+  ares__close_socket(channel, sock);
   return 1;
 }
 
@@ -440,9 +439,9 @@ static int find_src_addr(ares_channel channel,
  * Sort the linked list starting at sentinel->ai_next in RFC6724 order.
  * Will leave the list unchanged if an error occurs.
  */
-int ares__sortaddrinfo(ares_channel channel, struct ares_addrinfo *list_sentinel)
+int ares__sortaddrinfo(ares_channel channel, struct ares_addrinfo_node *list_sentinel)
 {
-  struct ares_addrinfo *cur;
+  struct ares_addrinfo_node *cur;
   int nelem = 0, i;
   int has_src_addr;
   struct addrinfo_sort_elem *elems;
