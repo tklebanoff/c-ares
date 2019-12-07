@@ -59,6 +59,9 @@
 #  include "ares_platform.h"
 #endif
 
+//NOTE: klebs_bugfix
+#include <limits.h>'
+
 struct host_query
 {
   ares_channel channel;
